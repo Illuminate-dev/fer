@@ -1,8 +1,8 @@
 use anyhow::Result;
-use std::io::{stdin, stdout, Write};
+use std::io::{stdin, Stdout, Write};
 use termion::event::Key;
 use termion::input::TermRead;
-use termion::raw::IntoRawMode;
+use termion::raw::RawTerminal;
 
 /// 1 based
 struct Cursor {
@@ -14,16 +14,49 @@ impl Cursor {
     pub fn new(x: u16, y: u16) -> Self {
         Self { x, y }
     }
+
+    fn move_by(&mut self, stdout: &mut RawTerminal<Stdout>, x_off: i16, y_off: i16) -> Result<()> {
+        let mut x = x_off + self.x as i16;
+        let mut y = y_off + self.y as i16;
+
+        if x < 1 {
+            x = 1;
+        }
+        if y < 1 {
+            y = 1;
+        }
+
+        let mut x = x as u16;
+        let mut y = y as u16;
+
+        let size = termion::terminal_size()?;
+
+        if x > size.0 {
+            x = size.0;
+        }
+        if y > size.1 {
+            y = size.1;
+        }
+
+        self.x = x;
+        self.y = y;
+
+        write!(stdout, "{}", termion::cursor::Goto(self.x, self.y))?;
+        stdout.flush()?;
+        Ok(())
+    }
 }
 
 pub struct App {
     cursor: Cursor,
+    stdout: RawTerminal<Stdout>,
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(stdout: RawTerminal<Stdout>) -> Self {
         App {
             cursor: Cursor::new(1, 1),
+            stdout,
         }
     }
 
@@ -31,21 +64,31 @@ impl App {
         self.show_screen()?;
 
         let stdin = stdin();
-        let mut stdout = stdout();
 
         for c in stdin.keys() {
             match c? {
                 Key::Ctrl('q') => break,
-                c => {
-                    write!(stdout, "{:?}\r\n", c)?;
-                }
+                Key::Char('j') => self.move_cursor(0, 1)?,
+                Key::Char('k') => self.move_cursor(0, -1)?,
+                Key::Char('h') => self.move_cursor(-1, 0)?,
+                Key::Char('l') => self.move_cursor(1, 0)?,
+                _ => {}
             }
-            stdout.flush()?;
+            self.stdout.flush()?;
         }
         Ok(())
     }
 
-    pub fn show_screen(&mut self) -> Result<()> {
+    fn show_screen(&mut self) -> Result<()> {
+        for _row in 0..termion::terminal_size()?.1 {
+            write!(self.stdout, "{}\r\n", "~")?;
+        }
+        write!(self.stdout, "{}", termion::cursor::Goto(1, 1))?;
+        self.stdout.flush()?;
         Ok(())
+    }
+
+    fn move_cursor(&mut self, x_off: i16, y_off: i16) -> Result<()> {
+        self.cursor.move_by(&mut self.stdout, x_off, y_off)
     }
 }

@@ -17,6 +17,6 @@ pub fn run() -> Result<()> {
     .unwrap();
 
     stdout.flush().unwrap();
-    let mut app = App::new();
+    let mut app = App::new(stdout);
     app.run()
 }
