@@ -15,7 +15,12 @@ impl Cursor {
         Self { x, y }
     }
 
-    fn move_by(&mut self, stdout: &mut RawTerminal<Stdout>, x_off: i16, y_off: i16) -> Result<()> {
+    fn move_by<'a>(
+        &mut self,
+        stdout: &mut RawTerminal<&'a Stdout>,
+        x_off: i16,
+        y_off: i16,
+    ) -> Result<()> {
         let mut x = x_off + self.x as i16;
         let mut y = y_off + self.y as i16;
 
@@ -47,13 +52,13 @@ impl Cursor {
     }
 }
 
-pub struct App {
+pub struct App<'a> {
     cursor: Cursor,
-    stdout: RawTerminal<Stdout>,
+    stdout: RawTerminal<&'a Stdout>,
 }
 
-impl App {
-    pub fn new(stdout: RawTerminal<Stdout>) -> Self {
+impl<'a> App<'a> {
+    pub fn new(stdout: RawTerminal<&'a Stdout>) -> Self {
         App {
             cursor: Cursor::new(1, 1),
             stdout,
