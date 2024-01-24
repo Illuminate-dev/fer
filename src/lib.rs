@@ -1,14 +1,18 @@
 use anyhow::Result;
 use app::App;
+use clap::Parser;
 use std::io::{stdout, Write};
 use std::ops::Deref;
 use termion::raw::IntoRawMode;
 use termion::screen::IntoAlternateScreen;
 
 mod app;
+mod args;
 
 pub fn run() -> Result<()> {
-    let mut stdout = stdout().into_alternate_screen()?;
+    let args = args::Args::parse();
+
+    let stdout = stdout().into_alternate_screen()?;
     let mut stdout = stdout.deref().into_raw_mode()?;
     write!(
         stdout,
@@ -18,7 +22,8 @@ pub fn run() -> Result<()> {
     )
     .unwrap();
 
+
     stdout.flush()?;
-    let mut app = App::new(stdout);
+    let mut app = App::new(stdout, args);
     app.run()
 }

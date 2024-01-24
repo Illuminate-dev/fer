@@ -1,8 +1,11 @@
 use anyhow::Result;
-use std::io::{stdin, Stdout, Write};
+use std::fs::File;
+use std::io::{stdin, BufRead, BufReader, Stdout, Write};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::RawTerminal;
+
+use crate::args::Args;
 
 /// 1 based
 struct Cursor {
@@ -55,13 +58,15 @@ impl Cursor {
 pub struct App<'a> {
     cursor: Cursor,
     stdout: RawTerminal<&'a Stdout>,
+    args: Args,
 }
 
 impl<'a> App<'a> {
-    pub fn new(stdout: RawTerminal<&'a Stdout>) -> Self {
+    pub fn new(stdout: RawTerminal<&'a Stdout>, args: Args) -> Self {
         App {
             cursor: Cursor::new(1, 1),
             stdout,
+            args,
         }
     }
 
@@ -85,8 +90,35 @@ impl<'a> App<'a> {
     }
 
     fn show_screen(&mut self) -> Result<()> {
-        for _row in 0..termion::terminal_size()?.1 {
-            write!(self.stdout, "{}\r\n", "~")?;
+        write!(self.stdout, "{}", termion::cursor::Goto(1, 1))?;
+
+        let (width, end) = termion::terminal_size()?;
+
+        let mut start = 0;
+
+        // show file if provided
+        if let Some(path) = &self.args.file {
+            let f = File::open(path)?;
+            let reader = BufReader::new(f);
+            for line in reader.lines() {
+                let line = line?;
+                let length = usize::min(width as usize, line.len());
+                let line = &line[..length];
+                write!(self.stdout, "{}", line)?;
+                // write!(self.stdout, "{}", "test")?;
+                if start == end - 1 {
+                    break;
+                }
+                write!(self.stdout, "\n\r")?;
+                start += 1;
+            }
+        }
+
+        for row in start..end {
+            write!(self.stdout, "{}", "~")?;
+            if row != end - 1 {
+                write!(self.stdout, "\n\r")?;
+            }
         }
         write!(self.stdout, "{}", termion::cursor::Goto(1, 1))?;
         self.stdout.flush()?;
