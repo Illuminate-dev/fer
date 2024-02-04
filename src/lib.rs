@@ -8,6 +8,8 @@ use termion::screen::IntoAlternateScreen;
 
 mod app;
 mod args;
+mod cursor;
+mod input;
 
 pub fn run() -> Result<()> {
     let args = args::Args::parse();
@@ -21,7 +23,6 @@ pub fn run() -> Result<()> {
         termion::cursor::Goto(1, 1)
     )
     .unwrap();
-
 
     stdout.flush()?;
     let mut app = App::new(stdout, args);
