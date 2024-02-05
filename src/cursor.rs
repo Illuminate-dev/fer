@@ -4,10 +4,10 @@ use termion::raw::RawTerminal;
 
 /// 1 based
 pub struct Cursor {
-    real_x: u16,
-    real_y: u16,
+    pub real_x: u16,
+    pub real_y: u16,
     /// 0 is the first line of the file, etc
-    file_y: usize,
+    pub file_y: usize,
 }
 
 impl Cursor {
@@ -28,11 +28,11 @@ impl Cursor {
     ) -> Result<()> {
         (self.real_x, self.real_y, self.file_y) = self.get_final_coords(x_off, y_off, file_data)?;
 
-        self.set_coords(stdout, self.real_x, self.real_y)?;
+        self.apply_coords(stdout)?;
 
         Ok(())
     }
-
+    /// returns (x, y, file_y, mem_x)
     pub fn get_final_coords(
         &self,
         x_off: i16,
@@ -61,7 +61,7 @@ impl Cursor {
         let file_y = file_y as usize;
         if file_y < file_data.len() {
             if x as usize > file_data[file_y as usize].len() {
-                x = file_data[file_y as usize].len() as u16;
+                x = u16::max(file_data[file_y as usize].len() as u16, 1);
             }
         }
 
@@ -77,20 +77,7 @@ impl Cursor {
         Ok((x, y, file_y))
     }
 
-    pub fn set_coords<'a>(
-        &mut self,
-        stdout: &mut RawTerminal<&'a Stdout>,
-        mut x: u16,
-        mut y: u16,
-    ) -> Result<()> {
-        let size = termion::terminal_size()?;
-
-        x = u16::min(x, size.0);
-        y = u16::min(y, size.1);
-
-        self.real_x = x;
-        self.real_y = y;
-
+    pub fn apply_coords<'a>(&mut self, stdout: &mut RawTerminal<&'a Stdout>) -> Result<()> {
         write!(
             stdout,
             "{}",

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use std::fs::File;
 use std::io::{stdin, BufRead, BufReader, Stdout, Write};
 use termion::input::TermRead;
@@ -35,12 +35,26 @@ impl<'a> App<'a> {
     pub fn run(&mut self) -> Result<()> {
         self.load_file()?;
         self.show_screen()?;
+        write!(self.stdout, "{}", termion::cursor::Goto(1, 1))?;
+        self.stdout.flush()?;
 
         let stdin = stdin();
 
         for c in stdin.keys() {
             match InputHandler::handle_input(self, c?)? {
                 ReturnCommand::Quit => break,
+                ReturnCommand::AddChar(c) => {
+                    self.insert_char(c)?;
+                    self.show_screen()?;
+                    self.move_cursor(1, 0)?;
+                    self.show_cursor()?;
+                }
+                ReturnCommand::DelChar => {
+                    self.del_char()?;
+                    self.show_screen()?;
+                    self.move_cursor(-1, 0)?;
+                    self.show_cursor()?;
+                }
                 ReturnCommand::None => {}
             }
             self.stdout.flush()?;
@@ -56,6 +70,10 @@ impl<'a> App<'a> {
             y_off,
             self.file_data.as_ref().unwrap_or(&vec![]),
         )
+    }
+
+    pub fn show_cursor(&mut self) -> Result<()> {
+        self.cursor.apply_coords(&mut self.stdout)
     }
 
     fn show_screen(&mut self) -> Result<()> {
@@ -84,7 +102,6 @@ impl<'a> App<'a> {
                 write!(self.stdout, "\n\r")?;
             }
         }
-        write!(self.stdout, "{}", termion::cursor::Goto(1, 1))?;
         self.stdout.flush()?;
         Ok(())
     }
@@ -100,6 +117,25 @@ impl<'a> App<'a> {
             }
         }
         self.file_data = Some(v);
+        Ok(())
+    }
+
+    fn insert_char(&mut self, c: char) -> Result<()> {
+        self.file_data
+            .as_deref_mut()
+            .ok_or(anyhow!("No file; can't insert character"))?[self.cursor.file_y]
+            .insert(self.cursor.real_x as usize - 1, c);
+        Ok(())
+    }
+
+    fn del_char(&mut self) -> Result<()> {
+        if self.cursor.real_x == 1 {
+            return Ok(());
+        }
+        self.file_data
+            .as_deref_mut()
+            .ok_or(anyhow!("No file; can't insert character"))?[self.cursor.file_y]
+            .remove(self.cursor.real_x as usize - 2);
         Ok(())
     }
 }

@@ -5,6 +5,8 @@ use termion::event::Key;
 
 pub enum ReturnCommand {
     Quit,
+    AddChar(char),
+    DelChar,
     None,
 }
 
@@ -35,6 +37,8 @@ impl InputHandler {
     fn handle_insert(app: &mut App, key: Key) -> Result<ReturnCommand> {
         match key {
             Key::Esc => app.current_mode = Mode::Normal,
+            Key::Char(c) => return Ok(ReturnCommand::AddChar(c)),
+            Key::Backspace => return Ok(ReturnCommand::DelChar),
             _ => {}
         }
         Ok(ReturnCommand::None)
