@@ -54,4 +54,11 @@ impl File {
         f.write_all(self.data.join("\n").as_bytes())?;
         Ok(())
     }
+
+    pub fn get_path_name(&self) -> String {
+        self.path
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or("No file path loaded!".to_string())
+    }
 }

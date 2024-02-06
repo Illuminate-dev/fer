@@ -114,12 +114,34 @@ impl<'a> App<'a> {
             start += 1;
         }
 
-        for row in start..end {
+        let banner_height = 1;
+
+        for _row in start..end - banner_height {
             write!(self.stdout, "{}", "~")?;
-            if row != end - 1 {
-                write!(self.stdout, "\n\r")?;
-            }
+            write!(self.stdout, "\n\r")?;
         }
+
+        // print banner
+        write!(
+            self.stdout,
+            "{}{}{}:{} - {}{}{}",
+            termion::color::Bg(termion::color::White),
+            termion::color::Fg(termion::color::Black),
+            self.cursor.file_y,
+            self.cursor.real_x,
+            if self.file.path.is_none() {
+                format!(
+                    "{}{}",
+                    termion::color::Bg(termion::color::Red),
+                    termion::color::Fg(termion::color::White),
+                )
+            } else {
+                "".to_string()
+            },
+            self.file.get_path_name(),
+            termion::style::Reset,
+        )?;
+
         self.stdout.flush()?;
         Ok(())
     }
