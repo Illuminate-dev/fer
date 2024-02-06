@@ -4,6 +4,7 @@ use termion::input::TermRead;
 use termion::raw::RawTerminal;
 
 use crate::args::Args;
+use crate::banner::Banner;
 use crate::cursor::Cursor;
 use crate::file::File;
 use crate::input::{InputHandler, ReturnCommand};
@@ -28,6 +29,7 @@ pub struct App<'a> {
     stdout: RawTerminal<&'a Stdout>,
     pub cursor: Cursor,
     pub file: File,
+    pub banner: Banner,
     pub current_mode: Mode,
 }
 
@@ -37,6 +39,7 @@ impl<'a> App<'a> {
             cursor: Cursor::new(1, 1),
             stdout,
             file: File::new(args.file),
+            banner: Banner::new(1),
             current_mode: Mode::Normal,
         }
     }
@@ -114,9 +117,7 @@ impl<'a> App<'a> {
             start += 1;
         }
 
-        let banner_height = 1;
-
-        for _row in start..end - banner_height {
+        for _row in start..end - self.banner.height {
             write!(self.stdout, "{}", "~")?;
             write!(self.stdout, "\n\r")?;
         }
@@ -124,22 +125,12 @@ impl<'a> App<'a> {
         // print banner
         write!(
             self.stdout,
-            "{}{}{}:{} - {}{}{}",
-            termion::color::Bg(termion::color::White),
-            termion::color::Fg(termion::color::Black),
-            self.cursor.file_y,
-            self.cursor.real_x,
-            if self.file.path.is_none() {
-                format!(
-                    "{}{}",
-                    termion::color::Bg(termion::color::Red),
-                    termion::color::Fg(termion::color::White),
-                )
-            } else {
-                "".to_string()
-            },
-            self.file.get_path_name(),
-            termion::style::Reset,
+            "{}",
+            self.banner.display(
+                self.cursor.real_x as usize,
+                self.cursor.real_y as usize,
+                &self.file
+            )
         )?;
 
         self.stdout.flush()?;
