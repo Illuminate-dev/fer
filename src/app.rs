@@ -23,6 +23,14 @@ impl Mode {
             Mode::Insert => 1,
         }
     }
+
+    /// returns string containing the code to change cursor to the relevant mode
+    pub fn get_cursor_set_string(&self) -> String {
+        match self {
+            Mode::Normal => termion::cursor::SteadyBlock.to_string(),
+            Mode::Insert => termion::cursor::SteadyBar.to_string(),
+        }
+    }
 }
 
 pub struct App<'a> {
@@ -150,5 +158,12 @@ impl<'a> App<'a> {
         }
         self.file
             .del_char(self.cursor.file_y, self.cursor.real_x as usize - 2)
+    }
+
+    pub fn update_mode(&mut self, mode: Mode) -> Result<()> {
+        self.current_mode = mode;
+        write!(self.stdout, "{}", self.current_mode.get_cursor_set_string())?;
+        self.stdout.flush()?;
+        Ok(())
     }
 }

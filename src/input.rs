@@ -27,7 +27,7 @@ impl InputHandler {
 
     fn handle_normal(app: &mut App, key: Key) -> Result<ReturnCommand> {
         match key {
-            Key::Char('i') => app.current_mode = Mode::Insert,
+            Key::Char('i') => app.update_mode(Mode::Insert)?,
             Key::Char('h') => app.move_cursor(-1, 0)?,
             Key::Char('j') => app.move_cursor(0, 1)?,
             Key::Char('k') => app.move_cursor(0, -1)?,
@@ -38,7 +38,7 @@ impl InputHandler {
     }
     fn handle_insert(app: &mut App, key: Key) -> Result<ReturnCommand> {
         match key {
-            Key::Esc => app.current_mode = Mode::Normal,
+            Key::Esc => app.update_mode(Mode::Normal)?,
             Key::Char(c) => return Ok(ReturnCommand::AddChar(c)),
             Key::Backspace => return Ok(ReturnCommand::DelChar),
             _ => {}
