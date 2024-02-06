@@ -7,6 +7,7 @@ use std::fs::File as FsFile;
 pub struct File {
     pub path: Option<PathBuf>,
     pub data: Vec<String>,
+    pub modified: bool,
 }
 
 impl File {
@@ -14,6 +15,7 @@ impl File {
         Self {
             path,
             data: Vec::new(),
+            modified: false,
         }
     }
 
@@ -37,6 +39,7 @@ impl File {
             .get_mut(y)
             .ok_or(anyhow!("invalid row"))?
             .insert(x, c);
+        self.modified = true;
         Ok(())
     }
 
