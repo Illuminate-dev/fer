@@ -9,6 +9,7 @@ use termion::screen::IntoAlternateScreen;
 mod app;
 mod args;
 mod cursor;
+mod file;
 mod input;
 
 pub fn run() -> Result<()> {

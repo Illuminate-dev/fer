@@ -1,23 +1,33 @@
-use anyhow::{anyhow, Result};
-use std::fs::File;
-use std::io::{stdin, BufRead, BufReader, Stdout, Write};
+use anyhow::Result;
+use std::io::{stdin, Stdout, Write};
 use termion::input::TermRead;
 use termion::raw::RawTerminal;
 
 use crate::args::Args;
 use crate::cursor::Cursor;
+use crate::file::File;
 use crate::input::{InputHandler, ReturnCommand};
 
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Mode {
     Normal,
     Insert,
 }
 
+impl Mode {
+    /// # of spaces to allow cursor to go to after line
+    pub fn get_extension(&self) -> usize {
+        match self {
+            Mode::Normal => 0,
+            Mode::Insert => 1,
+        }
+    }
+}
+
 pub struct App<'a> {
-    pub cursor: Cursor,
     stdout: RawTerminal<&'a Stdout>,
-    args: Args,
-    file_data: Option<Vec<String>>,
+    pub cursor: Cursor,
+    pub file: File,
     pub current_mode: Mode,
 }
 
@@ -26,14 +36,13 @@ impl<'a> App<'a> {
         App {
             cursor: Cursor::new(1, 1),
             stdout,
-            args,
-            file_data: None,
+            file: File::new(args.file),
             current_mode: Mode::Normal,
         }
     }
 
     pub fn run(&mut self) -> Result<()> {
-        self.load_file()?;
+        self.file.load()?;
         self.show_screen()?;
         write!(self.stdout, "{}", termion::cursor::Goto(1, 1))?;
         self.stdout.flush()?;
@@ -55,6 +64,9 @@ impl<'a> App<'a> {
                     self.move_cursor(-1, 0)?;
                     self.show_cursor()?;
                 }
+                ReturnCommand::SaveFile => {
+                    self.file.save()?;
+                }
                 ReturnCommand::None => {}
             }
             self.stdout.flush()?;
@@ -68,7 +80,8 @@ impl<'a> App<'a> {
             &mut self.stdout,
             x_off,
             y_off,
-            self.file_data.as_ref().unwrap_or(&vec![]),
+            &self.file.data,
+            self.current_mode,
         )
     }
 
@@ -77,14 +90,19 @@ impl<'a> App<'a> {
     }
 
     fn show_screen(&mut self) -> Result<()> {
-        write!(self.stdout, "{}", termion::cursor::Goto(1, 1))?;
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::cursor::Goto(1, 1),
+            termion::clear::All
+        )?;
 
         let (width, end) = termion::terminal_size()?;
 
         let mut start = 0;
 
         // show file if provided
-        for line in self.file_data.as_ref().unwrap_or(&vec![]) {
+        for line in &self.file.data {
             let length = usize::min(width as usize, line.len());
             let line = &line[..length];
             write!(self.stdout, "{}", line)?;
@@ -106,36 +124,18 @@ impl<'a> App<'a> {
         Ok(())
     }
 
-    fn load_file(&mut self) -> Result<()> {
-        let mut v = Vec::new();
-        if let Some(path) = &self.args.file {
-            let f = File::open(path)?;
-            let reader = BufReader::new(f);
-            let mut lines = reader.lines();
-            while let Some(line) = lines.next() {
-                v.push(line?);
-            }
-        }
-        self.file_data = Some(v);
-        Ok(())
-    }
-
     fn insert_char(&mut self, c: char) -> Result<()> {
-        self.file_data
-            .as_deref_mut()
-            .ok_or(anyhow!("No file; can't insert character"))?[self.cursor.file_y]
-            .insert(self.cursor.real_x as usize - 1, c);
-        Ok(())
+        // real_x is 1 indexed, change later
+        self.file
+            .insert_char(c, self.cursor.file_y, self.cursor.real_x as usize - 1)
     }
 
     fn del_char(&mut self) -> Result<()> {
+        // don't delete at 0
         if self.cursor.real_x == 1 {
             return Ok(());
         }
-        self.file_data
-            .as_deref_mut()
-            .ok_or(anyhow!("No file; can't insert character"))?[self.cursor.file_y]
-            .remove(self.cursor.real_x as usize - 2);
-        Ok(())
+        self.file
+            .del_char(self.cursor.file_y, self.cursor.real_x as usize - 2)
     }
 }

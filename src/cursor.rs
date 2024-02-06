@@ -2,6 +2,8 @@ use anyhow::Result;
 use std::io::{Stdout, Write};
 use termion::raw::RawTerminal;
 
+use crate::app::Mode;
+
 /// 1 based
 pub struct Cursor {
     pub real_x: u16,
@@ -25,19 +27,24 @@ impl Cursor {
         x_off: i16,
         y_off: i16,
         file_data: &Vec<String>,
+        mode: Mode,
     ) -> Result<()> {
-        (self.real_x, self.real_y, self.file_y) = self.get_final_coords(x_off, y_off, file_data)?;
+        (self.real_x, self.real_y, self.file_y) =
+            self.get_final_coords(x_off, y_off, file_data, mode)?;
 
         self.apply_coords(stdout)?;
 
         Ok(())
     }
     /// returns (x, y, file_y, mem_x)
+    /// file_data is to determine length of each line
+    /// Mode is to add extre length for insert
     pub fn get_final_coords(
         &self,
         x_off: i16,
         y_off: i16,
         file_data: &Vec<String>,
+        mode: Mode,
     ) -> Result<(u16, u16, usize)> {
         let mut x = x_off + self.real_x as i16;
         let mut y = y_off + self.real_y as i16;
@@ -60,7 +67,7 @@ impl Cursor {
         // reset x to be end of the line in the file
         let file_y = file_y as usize;
         if file_y < file_data.len() {
-            if x as usize > file_data[file_y as usize].len() {
+            if x as usize > file_data[file_y as usize].len() + mode.get_extension() {
                 x = u16::max(file_data[file_y as usize].len() as u16, 1);
             }
         }
