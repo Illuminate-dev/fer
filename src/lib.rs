@@ -8,6 +8,7 @@ use termion::screen::IntoAlternateScreen;
 
 mod app;
 mod args;
+mod banner;
 mod cursor;
 mod file;
 mod input;
