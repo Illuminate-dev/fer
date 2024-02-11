@@ -6,6 +6,7 @@ use termion::raw::RawTerminal;
 use crate::args::Args;
 use crate::banner::Banner;
 use crate::cursor::Cursor;
+use crate::edit_terminal::Terminal;
 use crate::file::File;
 use crate::input::{InputHandler, ReturnCommand};
 
@@ -39,6 +40,7 @@ pub struct App<'a> {
     pub file: File,
     pub banner: Banner,
     pub current_mode: Mode,
+    pub term: Terminal,
 }
 
 impl<'a> App<'a> {
@@ -49,6 +51,7 @@ impl<'a> App<'a> {
             file: File::new(args.file),
             banner: Banner::new(1),
             current_mode: Mode::Normal,
+            term: Terminal::new(1),
         }
     }
 
@@ -78,8 +81,14 @@ impl<'a> App<'a> {
                 ReturnCommand::SaveFile => {
                     self.file.save()?;
                 }
+                ReturnCommand::ToggleTerm => {
+                    self.term.toggle();
+                }
                 ReturnCommand::None => {}
             }
+            self.show_screen()?;
+            self.show_cursor()?;
+
             self.stdout.flush()?;
         }
         Ok(())
@@ -125,21 +134,20 @@ impl<'a> App<'a> {
             start += 1;
         }
 
-        for _row in start..end - self.banner.height {
+        let bottom_offset = self.banner.height + self.term.get_real_height();
+
+        for _row in start..end - bottom_offset {
             write!(self.stdout, "{}", "~")?;
             write!(self.stdout, "\n\r")?;
         }
 
-        // print banner
-        write!(
-            self.stdout,
-            "{}",
-            self.banner.display(
-                self.cursor.real_x as usize,
-                self.cursor.real_y as usize,
-                &self.file
-            )
-        )?;
+        // write term
+        if self.term.visible {
+            self.write_term(end - self.banner.height)?;
+        }
+
+        // write banner
+        self.write_banner(end)?;
 
         self.stdout.flush()?;
         Ok(())
@@ -165,5 +173,22 @@ impl<'a> App<'a> {
         write!(self.stdout, "{}", self.current_mode.get_cursor_set_string())?;
         self.stdout.flush()?;
         Ok(())
+    }
+
+    pub fn write_banner(&mut self, bottom: u16) -> Result<()> {
+        self.banner.write_banner(
+            &mut self.stdout,
+            self.cursor.real_x as usize,
+            self.cursor.real_y as usize,
+            &self.file,
+            &self.current_mode,
+            bottom,
+        )?;
+        // reset cursor position back to stored value
+        self.show_cursor()
+    }
+
+    pub fn write_term(&mut self, bottom: u16) -> Result<()> {
+        self.term.write_term(&mut self.stdout, bottom)
     }
 }

@@ -10,6 +10,7 @@ mod app;
 mod args;
 mod banner;
 mod cursor;
+mod edit_terminal;
 mod file;
 mod input;
 

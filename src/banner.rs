@@ -1,6 +1,10 @@
-use termion::style::Reset;
+use std::io::Stdout;
+use std::io::Write;
 
-use crate::file::File;
+use anyhow::Result;
+use termion::{raw::RawTerminal, style::Reset};
+
+use crate::{app::Mode, file::File};
 
 pub struct Banner {
     pub height: u16,
@@ -11,7 +15,7 @@ impl Banner {
         Self { height }
     }
 
-    pub fn display(&self, x: usize, y: usize, file: &File) -> String {
+    fn display_text(&self, x: usize, y: usize, file: &File, mode: &Mode) -> String {
         let normal_style = format!("{}", termion::color::Fg(termion::color::White),);
 
         let position = format!("{}:{}", y, x);
@@ -39,6 +43,52 @@ impl Banner {
             "".to_string()
         };
 
-        format!("{} - {}{}{}", pos_text, file_text, modified_text, Reset)
+        let mode_text = match mode {
+            Mode::Normal => {
+                format!(
+                    "{}{}{}",
+                    termion::color::Fg(termion::color::LightBlue),
+                    "Normal",
+                    Reset
+                )
+            }
+            Mode::Insert => {
+                format!(
+                    "{}{}{}",
+                    termion::color::Fg(termion::color::Green),
+                    "Insert",
+                    Reset
+                )
+            }
+        };
+
+        format!(
+            "{} {} - {}{}{}",
+            pos_text, mode_text, file_text, modified_text, Reset
+        )
+    }
+
+    pub fn write_banner<'a>(
+        &mut self,
+        stdout: &mut RawTerminal<&'a Stdout>,
+        x: usize,
+        y: usize,
+        file: &File,
+        mode: &Mode,
+        bottom: u16,
+    ) -> Result<()> {
+        let text = self.display_text(x, y, file, mode);
+
+        let y = bottom - self.height;
+
+        write!(
+            stdout,
+            "{}{}{}",
+            termion::cursor::Goto(1, y),
+            termion::clear::CurrentLine,
+            text
+        )?;
+        stdout.flush()?;
+        Ok(())
     }
 }

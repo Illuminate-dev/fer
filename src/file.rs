@@ -45,16 +45,18 @@ impl File {
 
     pub fn del_char(&mut self, y: usize, x: usize) -> Result<()> {
         self.data[y].remove(x as usize);
+        self.modified = true;
         Ok(())
     }
 
-    pub fn save(&self) -> Result<()> {
+    pub fn save(&mut self) -> Result<()> {
         if self.path.is_none() {
             return Err(anyhow!("no path"));
         }
         let path = self.path.as_ref().unwrap();
         let mut f = FsFile::create(path)?;
         f.write_all(self.data.join("\n").as_bytes())?;
+        self.modified = false;
         Ok(())
     }
 

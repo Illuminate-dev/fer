@@ -8,6 +8,7 @@ pub enum ReturnCommand {
     AddChar(char),
     DelChar,
     SaveFile,
+    ToggleTerm,
     None,
 }
 
@@ -18,7 +19,8 @@ impl InputHandler {
         match key {
             Key::Ctrl('q') => Ok(ReturnCommand::Quit),
             Key::Ctrl('s') => Ok(ReturnCommand::SaveFile),
-            _ => match app.current_mode {
+            Key::Char(':') => Ok(ReturnCommand::ToggleTerm),
+            _x => match app.current_mode {
                 Mode::Normal => Self::handle_normal(app, key),
                 Mode::Insert => Self::handle_insert(app, key),
             },
