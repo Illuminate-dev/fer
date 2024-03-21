@@ -6,7 +6,7 @@ use termion::event::Key;
 pub enum ReturnCommand {
     Quit,
     AddChar(char),
-    DelChar,
+    Backspace,
     SaveFile,
     ToggleTerm,
     None,
@@ -20,7 +20,7 @@ impl InputHandler {
             Key::Ctrl('q') => Ok(ReturnCommand::Quit),
             Key::Ctrl('s') => Ok(ReturnCommand::SaveFile),
             Key::Char(':') => Ok(ReturnCommand::ToggleTerm),
-            _x => match app.current_mode {
+            _ => match app.current_mode {
                 Mode::Normal => Self::handle_normal(app, key),
                 Mode::Insert => Self::handle_insert(app, key),
             },
@@ -42,7 +42,7 @@ impl InputHandler {
         match key {
             Key::Esc => app.update_mode(Mode::Normal)?,
             Key::Char(c) => return Ok(ReturnCommand::AddChar(c)),
-            Key::Backspace => return Ok(ReturnCommand::DelChar),
+            Key::Backspace => return Ok(ReturnCommand::Backspace),
             _ => {}
         }
         Ok(ReturnCommand::None)

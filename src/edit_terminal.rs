@@ -1,8 +1,8 @@
-use std::io::Stdout;
 use std::io::Write;
 
 use anyhow::Result;
-use termion::raw::RawTerminal;
+
+use crate::output::OutputHandler;
 
 pub struct Terminal {
     pub visible: bool,
@@ -17,15 +17,22 @@ impl Terminal {
         }
     }
 
-    pub fn write_term<'a>(&self, stdout: &mut RawTerminal<&'a Stdout>, bottom: u16) -> Result<()> {
+    pub fn write_term<'a>(&self, output: &mut OutputHandler<'a>, bottom: u16) -> Result<()> {
         let top = bottom - self.height;
         for line in top..bottom {
             write!(
-                stdout,
-                "{}{}{}",
+                output,
+                "{}{}",
                 termion::cursor::Goto(1, line),
                 termion::clear::CurrentLine,
-                ":"
+            )?;
+            write!(
+                output,
+                "{}{}{}{}",
+                termion::color::Bg(termion::color::Rgb(60, 54, 66)),
+                ":",
+                " ".repeat(output.size.0 as usize - 1),
+                termion::style::Reset,
             )?;
         }
 

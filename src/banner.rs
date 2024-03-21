@@ -1,9 +1,9 @@
-use std::io::Stdout;
 use std::io::Write;
 
 use anyhow::Result;
-use termion::{raw::RawTerminal, style::Reset};
+use termion::style::Reset;
 
+use crate::output::OutputHandler;
 use crate::{app::Mode, file::File};
 
 pub struct Banner {
@@ -70,7 +70,7 @@ impl Banner {
 
     pub fn write_banner<'a>(
         &mut self,
-        stdout: &mut RawTerminal<&'a Stdout>,
+        output: &mut OutputHandler<'a>,
         x: usize,
         y: usize,
         file: &File,
@@ -79,16 +79,16 @@ impl Banner {
     ) -> Result<()> {
         let text = self.display_text(x, y, file, mode);
 
-        let y = bottom - self.height;
+        let banner_y = bottom - self.height;
 
         write!(
-            stdout,
+            output,
             "{}{}{}",
-            termion::cursor::Goto(1, y),
+            termion::cursor::Goto(1, banner_y),
             termion::clear::CurrentLine,
             text
         )?;
-        stdout.flush()?;
+        output.flush()?;
         Ok(())
     }
 }

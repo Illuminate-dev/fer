@@ -13,6 +13,7 @@ mod cursor;
 mod edit_terminal;
 mod file;
 mod input;
+mod output;
 
 pub fn run() -> Result<()> {
     let args = args::Args::parse();
